@@ -54,3 +54,21 @@
 ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 8px; }
 ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* Stripe PaymentElement Styling */
+.StripeElement {
+  border-radius: 8px;
+  background-color: white;
+}
+
+.StripeElement--focus {
+  box-shadow: 0 0 0 3px rgba(217, 26, 122, 0.1);
+}
+
+.StripeElement--invalid {
+  border-color: #dc2626;
+}
+
+.StripeElement--complete {
+  border-color: #16a34a;
+}

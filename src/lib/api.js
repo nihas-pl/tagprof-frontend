@@ -34,6 +34,13 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('auth_token')
       localStorage.removeItem('user')
       window.location.href = '/login'
+    } else if (error.response?.status === 402) {
+      // Payment Required - subscription expired
+      // Emit custom event to show subscription modal
+      const event = new CustomEvent('subscription-required', {
+        detail: error.response?.data
+      });
+      window.dispatchEvent(event);
     }
     return Promise.reject(error)
   }
@@ -123,6 +130,36 @@ export const api = {
   social: {
     getStatus: () => apiClient.get('/api/v1/social/status'),
     disconnect: (provider) => apiClient.delete(`/api/v1/social/${provider}`),
+  },
+
+  // User profile
+  users: {
+    getProfile: () => apiClient.get('/api/v1/users/profile'),
+    updateProfile: (name) => 
+      apiClient.put('/api/v1/users/profile', { user: { name } }),
+    updatePassword: (currentPassword, newPassword, passwordConfirmation) => 
+      apiClient.put('/api/v1/users/password', { 
+        user: { 
+          current_password: currentPassword, 
+          new_password: newPassword, 
+          password_confirmation: passwordConfirmation 
+        } 
+      }),
+  },
+
+  // Subscriptions
+  subscriptions: {
+    current: () => apiClient.get('/api/v1/subscription/current'),
+    plans: () => apiClient.get('/api/v1/subscription/plans'),
+    createSetupIntent: () => apiClient.post('/api/v1/subscription/create_setup_intent'),
+    subscribe: (priceId, paymentMethodId) => 
+      apiClient.post('/api/v1/subscription/subscribe', { price_id: priceId, payment_method_id: paymentMethodId }),
+    cancel: () => apiClient.post('/api/v1/subscription/cancel'),
+    reactivate: () => apiClient.post('/api/v1/subscription/reactivate'),
+    updatePayment: (paymentMethodId) => 
+      apiClient.post('/api/v1/subscription/update_payment', { payment_method_id: paymentMethodId }),
+    getPortalUrl: (returnUrl) => 
+      apiClient.get('/api/v1/subscription/portal', { params: { return_url: returnUrl } }),
   },
 }
 

@@ -15,8 +15,14 @@ import Signup from './pages/Signup'
 import OAuthCallback from './pages/OAuthCallback'
 import Verification from './pages/Verification'
 import ConnectInstagram from './pages/ConnectInstagram'
+import TrialBanner from './components/TrialBanner'
+import SubscriptionBlockedModal from './components/SubscriptionBlockedModal'
+import PlanSelectionDialog from './components/PlanSelectionDialog'
+import { useState } from 'react'
 
 export default function App() {
+  const [showPlanDialog, setShowPlanDialog] = useState(false)
+
   return (
     <>
       <Routes>
@@ -26,18 +32,76 @@ export default function App() {
         <Route path="/connect/instagram" element={<ConnectInstagram />} />
         
         <Route element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="mentions" element={<Mentions />} />
-          <Route path="dm-templates" element={<AutoReplies />} />
-          <Route path="campaigns" element={<DiscountCampaigns />} />
-          <Route path="campaigns/:id" element={<CampaignDetail />} />
-          <Route path="discount-codes" element={<DiscountCodes />} />
-          <Route path="settings/discounts" element={<DiscountSettings />} />
-          <Route path="sentiment-filter" element={<SentimentFilter />} />
-          <Route path="verification" element={<Verification />} />
-          <Route path="settings" element={<Settings />} />
+          <Route index element={
+            <>
+              <TrialBanner onUpgradeClick={() => setShowPlanDialog(true)} />
+              <Dashboard />
+            </>
+          } />
+          <Route path="mentions" element={
+            <>
+              <TrialBanner onUpgradeClick={() => setShowPlanDialog(true)} />
+              <Mentions />
+            </>
+          } />
+          <Route path="dm-templates" element={
+            <>
+              <TrialBanner onUpgradeClick={() => setShowPlanDialog(true)} />
+              <AutoReplies />
+            </>
+          } />
+          <Route path="campaigns" element={
+            <>
+              <TrialBanner onUpgradeClick={() => setShowPlanDialog(true)} />
+              <DiscountCampaigns />
+            </>
+          } />
+          <Route path="campaigns/:id" element={
+            <>
+              <TrialBanner onUpgradeClick={() => setShowPlanDialog(true)} />
+              <CampaignDetail />
+            </>
+          } />
+          <Route path="discount-codes" element={
+            <>
+              <TrialBanner onUpgradeClick={() => setShowPlanDialog(true)} />
+              <DiscountCodes />
+            </>
+          } />
+          <Route path="settings/discounts" element={
+            <>
+              <TrialBanner onUpgradeClick={() => setShowPlanDialog(true)} />
+              <DiscountSettings />
+            </>
+          } />
+          <Route path="sentiment-filter" element={
+            <>
+              <TrialBanner onUpgradeClick={() => setShowPlanDialog(true)} />
+              <SentimentFilter />
+            </>
+          } />
+          <Route path="verification" element={
+            <>
+              <TrialBanner onUpgradeClick={() => setShowPlanDialog(true)} />
+              <Verification />
+            </>
+          } />
+          <Route path="settings" element={
+            <>
+              <TrialBanner onUpgradeClick={() => setShowPlanDialog(true)} />
+              <Settings />
+            </>
+          } />
         </Route>
       </Routes>
+      
+      {/* Global Subscription Components */}
+      <SubscriptionBlockedModal />
+      <PlanSelectionDialog 
+        open={showPlanDialog} 
+        onOpenChange={setShowPlanDialog} 
+      />
+      
       <Toaster
         position="bottom-right"
         toastOptions={{

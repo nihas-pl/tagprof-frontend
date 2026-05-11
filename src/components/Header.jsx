@@ -18,7 +18,6 @@ const titleMap = {
   '/mentions': 'Mentions',
   '/auto-replies': 'Auto-Replies',
   '/discount-codes': 'Discount Codes',
-  '/sentiment-filter': 'Sentiment Filter',
   '/verification': 'Verification',
   '/analytics': 'Analytics',
   '/settings': 'Settings',

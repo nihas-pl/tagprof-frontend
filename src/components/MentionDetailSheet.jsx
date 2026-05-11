@@ -1,5 +1,5 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet'
-import { Avatar, AvatarFallback } from './ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Switch } from './ui/switch'
@@ -21,7 +21,9 @@ export function MentionDetailSheet({ mention, open, onOpenChange }) {
   if (!mention) return null
 
   const username = mention.ig_handle || 'unknown'
-  const initials = username.split(/[._]/).map((s) => s[0]).join('').slice(0, 2).toUpperCase()
+  const name = mention.contact?.name || mention.contact?.instagram_username || username
+  const initial = name.charAt(0).toUpperCase()
+  const avatarUrl = mention.contact?.avatar_url
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -29,10 +31,14 @@ export function MentionDetailSheet({ mention, open, onOpenChange }) {
         <SheetHeader>
           <div className="flex items-center gap-3">
             <Avatar className="h-11 w-11">
-              <AvatarFallback>{initials}</AvatarFallback>
+              {avatarUrl && <AvatarImage src={avatarUrl} alt={name} />}
+              <AvatarFallback className="bg-gradient-to-br from-brand to-purple-500 text-white font-semibold">{initial}</AvatarFallback>
             </Avatar>
             <div>
               <SheetTitle className="text-base">@{username}</SheetTitle>
+              {mention.contact?.name && (
+                <div className="text-sm text-gray-600 font-normal">{mention.contact.name}</div>
+              )}
               <SheetDescription className="text-xs">{timeAgo(mention.created_at)} · Mention #{mention.id}</SheetDescription>
             </div>
           </div>
@@ -67,11 +73,11 @@ export function MentionDetailSheet({ mention, open, onOpenChange }) {
           )}
 
           <div>
-            <div className="flex items-center justify-between">
+            {/* <div className="flex items-center justify-between">
               <Label className="text-xs uppercase tracking-wide text-gray-500">Sentiment score</Label>
               <SentimentBadge sentiment={mention.sentiment_label} />
-            </div>
-            <div className="mt-2 flex items-center gap-3">
+            </div> */}
+            {/* <div className="mt-2 flex items-center gap-3">
               <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
                 <div
                   className="h-full transition-all"
@@ -83,7 +89,7 @@ export function MentionDetailSheet({ mention, open, onOpenChange }) {
                 />
               </div>
               <span className="text-sm font-semibold text-gray-900 tabular-nums">{mention.sentiment_score}/100</span>
-            </div>
+            </div> */}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -111,7 +117,7 @@ export function MentionDetailSheet({ mention, open, onOpenChange }) {
             </div>
           </div>
 
-          <div>
+          {/* <div>
             <Label className="text-xs uppercase tracking-wide text-gray-500">Send a manual reply</Label>
             <Textarea
               className="mt-1.5"
@@ -131,7 +137,7 @@ export function MentionDetailSheet({ mention, open, onOpenChange }) {
             >
               <Send className="h-3.5 w-3.5 mr-1.5" /> Send DM
             </Button>
-          </div>
+          </div> */}
 
           <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
             <div>

@@ -29,6 +29,37 @@ const timeAgo = (date) => {
   return `${Math.floor(seconds / 86400)}d ago`
 }
 
+const Avatar = ({ contact, username }) => {
+  const name = contact?.name || contact?.instagram_username || username
+  const avatarUrl = contact?.avatar_url
+  const initial = name?.charAt(0).toUpperCase() || '?'
+  
+  if (avatarUrl) {
+    return (
+      <div className="relative h-8 w-8">
+        <img 
+          src={avatarUrl} 
+          alt={name}
+          className="h-8 w-8 rounded-full object-cover"
+          onError={(e) => {
+            e.target.style.display = 'none'
+            e.target.nextElementSibling.style.display = 'flex'
+          }}
+        />
+        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-brand to-purple-500 flex items-center justify-center text-white font-semibold text-sm hidden">
+          {initial}
+        </div>
+      </div>
+    )
+  }
+  
+  return (
+    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-brand to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+      {initial}
+    </div>
+  )
+}
+
 export default function Mentions() {
   const [query, setQuery] = useState('')
   const [sentiment, setSentiment] = useState('all')
@@ -71,7 +102,7 @@ export default function Mentions() {
                 className="pl-8"
               />
             </div>
-            <Select value={sentiment} onValueChange={setSentiment}>
+            {/* <Select value={sentiment} onValueChange={setSentiment}>
               <SelectTrigger className="w-[150px]"><SelectValue placeholder="Sentiment" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All sentiments</SelectItem>
@@ -79,7 +110,7 @@ export default function Mentions() {
                 <SelectItem value="neutral">Neutral</SelectItem>
                 <SelectItem value="negative">Negative</SelectItem>
               </SelectContent>
-            </Select>
+            </Select> */}
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
@@ -120,8 +151,11 @@ export default function Mentions() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[40px]"><Checkbox /></TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                  
                   <TableHead>Username</TableHead>
-                  <TableHead>Sentiment</TableHead>
+                  <TableHead>Name</TableHead>
+                  {/* <TableHead>Sentiment</TableHead> */}
                   <TableHead>Status</TableHead>
                   <TableHead>Code</TableHead>
                   <TableHead>Redeemed</TableHead>
@@ -139,8 +173,12 @@ export default function Mentions() {
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Checkbox />
                     </TableCell>
+                    <TableCell>
+                      <Avatar contact={m.contact} username={m.ig_handle} />
+                    </TableCell>
                     <TableCell className="font-medium text-gray-900">@{m.ig_handle}</TableCell>
-                    <TableCell><SentimentBadge sentiment={m.sentiment_label} /></TableCell>
+                    <TableCell className="text-gray-700">{m.contact?.name || '—'}</TableCell>
+                    {/* <TableCell><SentimentBadge sentiment={m.sentiment_label} /></TableCell> */}
                     <TableCell><DMStatusIcon status={m.status} /></TableCell>
                     <TableCell className="font-mono text-xs text-gray-700">{m.discount_code?.code || '—'}</TableCell>
                     <TableCell>

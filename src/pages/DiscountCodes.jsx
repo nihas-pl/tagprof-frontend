@@ -1,18 +1,15 @@
 import { useMemo, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Search, Sparkles, ExternalLink } from 'lucide-react'
+import { Search, Sparkles, ExternalLink } from 'lucide-react'
 import { api } from '@/lib/api'
-import { toast } from 'sonner'
 
 function StatusBadge({ status }) {
   const map = {
@@ -33,11 +30,8 @@ const timeAgo = (date) => {
 }
 
 export default function DiscountCodes() {
-  const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
-  const [openGenerate, setOpenGenerate] = useState(false)
-  const [count, setCount] = useState(50)
   const [page, setPage] = useState(1)
 
   const { data, isLoading } = useQuery({
@@ -48,20 +42,6 @@ export default function DiscountCodes() {
       
       const response = await api.discountCodes.list(params)
       return response.data
-    },
-  })
-
-  const generateMutation = useMutation({
-    mutationFn: async (count) => {
-      return await api.discounts.bulkGenerate(count)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['discount-codes'] })
-      toast.success(`${count} codes generated successfully`)
-      setOpenGenerate(false)
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to generate codes')
     },
   })
 
@@ -152,10 +132,8 @@ export default function DiscountCodes() {
           ) : filtered.length === 0 ? (
             <div className="p-12 text-center text-gray-500">
               <Sparkles className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="mb-4">No discount codes yet</p>
-              <Button onClick={() => setOpenGenerate(true)}>
-                <Plus className="h-4 w-4 mr-1.5" /> Generate Codes
-              </Button>
+              <p>No discount codes found</p>
+              <p className="text-xs mt-2">Codes are generated within campaigns</p>
             </div>
           ) : (
             <Table>
@@ -239,51 +217,6 @@ export default function DiscountCodes() {
           </div>
         </div>
       )}
-
-      {/* Generate codes dialog */}
-      <Dialog open={openGenerate} onOpenChange={setOpenGenerate}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Generate Codes</DialogTitle>
-            <DialogDescription>
-              Generate unique 6-character alphanumeric discount codes
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>How many codes?</Label>
-              <Input 
-                className="mt-1.5" 
-                type="number" 
-                value={count} 
-                onChange={(e) => setCount(Number(e.target.value))} 
-                min={1}
-                max={1000}
-              />
-              <p className="text-xs text-gray-500 mt-1.5">Maximum 1000 codes per generation</p>
-            </div>
-            <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 text-xs">
-              <span className="text-gray-500">Format:</span>
-              <span className="ml-2 font-mono text-gray-900">A1B2C3 (6 characters, alphanumeric)</span>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setOpenGenerate(false)}
-              disabled={generateMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={() => generateMutation.mutate(count)}
-              disabled={generateMutation.isPending || count < 1 || count > 1000}
-            >
-              {generateMutation.isPending ? 'Generating...' : `Generate ${count} codes`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

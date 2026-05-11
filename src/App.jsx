@@ -8,7 +8,6 @@ import DiscountCampaigns from './pages/DiscountCampaigns'
 import CampaignDetail from './pages/CampaignDetail'
 import DiscountCodes from './pages/DiscountCodes'
 import DiscountSettings from './pages/DiscountSettings'
-import SentimentFilter from './pages/SentimentFilter'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
@@ -72,12 +71,6 @@ export default function App() {
             <>
               <TrialBanner onUpgradeClick={() => setShowPlanDialog(true)} />
               <DiscountSettings />
-            </>
-          } />
-          <Route path="sentiment-filter" element={
-            <>
-              <TrialBanner onUpgradeClick={() => setShowPlanDialog(true)} />
-              <SentimentFilter />
             </>
           } />
           <Route path="verification" element={

@@ -11,29 +11,39 @@ import { Slider } from '@/components/ui/slider'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Edit, Copy, Trash2, MessageCircle, Package } from 'lucide-react'
+import { Plus, Edit, Copy, Trash2, MessageCircle, Package, Info, AlertCircle } from 'lucide-react'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
 
 const tokens = ['{username}', '{code}', '{expiry}', '{discount_value}', '{min_order}']
+const DEFAULT_TEMPLATE = 'Hey {username}! 💕 Thanks for tagging us! Use {code} for {discount_value} off. Valid for {expiry}.'
+const INSTAGRAM_DM_LIMIT = 1000
 
 function PhonePreview({ message }) {
   return (
     <div className="rounded-[3rem] border-[12px] border-gray-900 bg-black shadow-2xl w-[280px] h-[480px] mx-auto overflow-hidden relative">
       {/* Dynamic Island */}
-      <div className="absolute top-2 left-1/2 -translate-x-1/2 w-32 h-9 bg-black rounded-full z-10" />
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-6 bg-black rounded-full z-10" />
       
       {/* Screen */}
       <div className="h-full w-full bg-white flex flex-col">
         {/* Status Bar */}
-        <div className="h-14 flex items-end justify-between px-6 pb-2">
+        <div className="h-10 flex items-center justify-between px-4">
           <div className="text-[11px] font-semibold">9:41</div>
-          <div className="flex items-center gap-1">
-            <svg className="w-4 h-3" viewBox="0 0 16 12" fill="none">
-              <path d="M1.5 4.5h2v3h-2v-3zm3 0h2v3h-2v-3zm3 0h2v3h-2v-3zm3 0h2v3h-2v-3z" fill="currentColor"/>
+          <div className="flex items-center gap-1.5">
+            {/* Signal Strength */}
+            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M1 13h2v2H1v-2zm3-3h2v5H4v-5zm3-3h2v8H7V7zm3-3h2v11h-2V4zm3-3h2v14h-2V1z"/>
             </svg>
+            {/* WiFi */}
+            <svg className="w-4 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-4c-2.2 0-4.2.9-5.7 2.3L8 18c1-1 2.4-1.6 4-1.6s3 .6 4 1.6l1.7-1.7C16.2 14.9 14.2 14 12 14zm0-4c-3.3 0-6.3 1.3-8.5 3.5L5.2 15c1.7-1.7 4.1-2.8 6.8-2.8s5.1 1.1 6.8 2.8l1.7-1.5C18.3 11.3 15.3 10 12 10zm0-4C7.4 6 3.3 7.9.5 11.5L2.2 13C4.7 10.5 8.2 9 12 9s7.3 1.5 9.8 4l1.7-1.5C20.7 7.9 16.6 6 12 6z" opacity="0.3"/>
+              <path d="M12 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm5.7-3.7C16.2 12.9 14.2 12 12 12s-4.2.9-5.7 2.3L8 16c1-1 2.4-1.6 4-1.6s3 .6 4 1.6l1.7-1.7z"/>
+            </svg>
+            {/* Battery */}
             <svg className="w-6 h-3.5" viewBox="0 0 24 12" fill="none">
               <rect x="1" y="1" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+              <rect x="2.5" y="2.5" width="15" height="7" rx="1" fill="currentColor"/>
               <rect x="20" y="4" width="2" height="4" rx="1" fill="currentColor"/>
             </svg>
           </div>
@@ -64,18 +74,19 @@ function PhonePreview({ message }) {
 
 function TemplateEditor({ open, onOpenChange, template, onSave, campaigns = [] }) {
   const [name, setName] = useState(template?.name || '')
-  const [body, setBody] = useState(template?.body || 'Hey {username}! 💕 Thanks for tagging us! Use {code} for {discount_value} off. Valid for {expiry}.')
+  const [body, setBody] = useState(template?.body || DEFAULT_TEMPLATE)
   const [language, setLanguage] = useState(template?.language || 'en')
-  const [threshold, setThreshold] = useState([template?.threshold || 70])
+  const [threshold, setThreshold] = useState([template?.threshold || 0])
   const [campaignId, setCampaignId] = useState(template?.campaign?.id?.toString() || '')
   const [sentimentTarget, setSentimentTarget] = useState(template?.sentiment_target || 'positive')
   const [priority, setPriority] = useState(template?.priority || 0)
+  const [showSampleDialog, setShowSampleDialog] = useState(false)
 
   // Update form when template changes
   useEffect(() => {
     if (template) {
       setName(template.name || '')
-      setBody(template.body || 'Hey {username}! 💕 Thanks for tagging us! Use {code} for {discount_value} off. Valid for {expiry}.')
+      setBody(template.body || DEFAULT_TEMPLATE)
       setLanguage(template.language || 'en')
       setThreshold([template.threshold || 70])
       setCampaignId(template.campaign?.id?.toString() || '')
@@ -84,7 +95,7 @@ function TemplateEditor({ open, onOpenChange, template, onSave, campaigns = [] }
     } else {
       // Reset form for new template
       setName('')
-      setBody('Hey {username}! 💕 Thanks for tagging us! Use {code} for {discount_value} off. Valid for {expiry}.')
+      setBody(DEFAULT_TEMPLATE)
       setLanguage('en')
       setThreshold([70])
       setCampaignId('')
@@ -97,6 +108,57 @@ function TemplateEditor({ open, onOpenChange, template, onSave, campaigns = [] }
     setBody((b) => b + ' ' + token)
   }
 
+  const validateTokens = (text) => {
+    const errors = []
+    
+    // Check for unmatched brackets
+    let openCount = 0
+    let closeCount = 0
+    let lastOpenIndex = -1
+    
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === '{') {
+        openCount++
+        lastOpenIndex = i
+      } else if (text[i] === '}') {
+        closeCount++
+        if (closeCount > openCount) {
+          errors.push('Found closing bracket } without matching opening bracket {')
+          break
+        }
+      }
+    }
+    
+    if (openCount > closeCount) {
+      const unclosedText = text.substring(lastOpenIndex, Math.min(lastOpenIndex + 20, text.length))
+      errors.push(`Found unclosed bracket: ${unclosedText}...`)
+    }
+    
+    // Check for empty tokens
+    if (text.includes('{}')) {
+      errors.push('Found empty token {}')
+    }
+    
+    // Check for nested brackets
+    if (text.includes('{{') || text.includes('}}')) {
+      errors.push('Found nested brackets ({{ or }})')
+    }
+    
+    // Find all valid tokens and check against allowed list
+    const tokenPattern = /\{([^}]+)\}/g
+    const foundTokens = [...text.matchAll(tokenPattern)].map(match => `{${match[1]}}`)
+    const invalidTokens = foundTokens.filter(token => !tokens.includes(token))
+    
+    if (invalidTokens.length > 0) {
+      errors.push(`Invalid tokens: ${[...new Set(invalidTokens)].join(', ')}`)
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    }
+  }
+
   const handleSave = () => {
     if (!name.trim()) {
       toast.error('Template name is required')
@@ -106,8 +168,31 @@ function TemplateEditor({ open, onOpenChange, template, onSave, campaigns = [] }
       toast.error('Message body is required')
       return
     }
-    if (!campaignId) {
-      toast.error('Please select a campaign')
+
+    // Check if campaign-dependent tokens are used
+    const campaignTokens = ['{code}', '{discount_value}', '{expiry}', '{min_order}']
+    const usesCampaignTokens = campaignTokens.some(token => body.includes(token))
+    
+    if (usesCampaignTokens && !campaignId) {
+      toast.error('Campaign is required when using {code}, {discount_value}, {expiry}, or {min_order} tokens')
+      return
+    }
+
+    // Validate tokens
+    const validation = validateTokens(body)
+    if (!validation.isValid) {
+      toast.error(
+        <div className="space-y-1">
+          <div className="font-semibold">Template validation failed:</div>
+          <ul className="text-sm list-disc list-inside">
+            {validation.errors.map((error, idx) => (
+              <li key={idx}>{error}</li>
+            ))}
+          </ul>
+          <div className="text-xs mt-2 opacity-75">Valid tokens: {tokens.join(', ')}</div>
+        </div>,
+        { duration: 5000 }
+      )
       return
     }
 
@@ -117,7 +202,7 @@ function TemplateEditor({ open, onOpenChange, template, onSave, campaigns = [] }
       language,
       threshold: threshold[0],
       sentiment_target: sentimentTarget,
-      discount_campaign_id: parseInt(campaignId),
+      discount_campaign_id: campaignId ? parseInt(campaignId) : null,
       priority,
       active: template?.active ?? true,
     })
@@ -142,20 +227,52 @@ function TemplateEditor({ open, onOpenChange, template, onSave, campaigns = [] }
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[65vh] overflow-y-auto pr-1">
-          <div className="space-y-4">
+          <div className="space-y-4 px-1">
             <div>
               <Label>Template name</Label>
               <Input className="mt-1.5" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Default Thank You" />
             </div>
 
             <div>
-              <Label>Message body</Label>
+              <div className="flex items-center justify-between">
+                <Label>Message body</Label>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-mono tabular-nums ${
+                    body.length > INSTAGRAM_DM_LIMIT ? 'text-red-600 font-semibold' :
+                    body.length > INSTAGRAM_DM_LIMIT * 0.9 ? 'text-amber-600' :
+                    'text-gray-500'
+                  }`}>
+                    {body.length} / {INSTAGRAM_DM_LIMIT}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowSampleDialog(true)}
+                    className="h-6 px-2 text-xs"
+                  >
+                    <Info className="h-3 w-3 mr-1" />
+                    View Sample
+                  </Button>
+                </div>
+              </div>
               <Textarea
                 className="mt-1.5 font-mono text-xs"
-                rows={6}
+                rows={12}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
+                maxLength={INSTAGRAM_DM_LIMIT}
               />
+              {body.length > INSTAGRAM_DM_LIMIT * 0.9 && (
+                <div className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-600">
+                  <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span>
+                    {body.length >= INSTAGRAM_DM_LIMIT
+                      ? 'Instagram DM character limit reached'
+                      : `Approaching Instagram DM limit (${INSTAGRAM_DM_LIMIT - body.length} characters remaining)`}
+                  </span>
+                </div>
+              )}
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <span className="text-xs text-gray-500 mr-1 self-center">Insert:</span>
                 {tokens.map((t) => (
@@ -170,8 +287,8 @@ function TemplateEditor({ open, onOpenChange, template, onSave, campaigns = [] }
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
+            <div className="grid grid-cols-1 gap-3">
+              {/* <div>
                 <Label>Language</Label>
                 <Select value={language} onValueChange={setLanguage}>
                   <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
@@ -180,8 +297,8 @@ function TemplateEditor({ open, onOpenChange, template, onSave, campaigns = [] }
                     <SelectItem value="ar">Arabic</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div>
+              </div> */}
+              {/* <div>
                 <Label>Sentiment Target</Label>
                 <Select value={sentimentTarget} onValueChange={setSentimentTarget}>
                   <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
@@ -191,14 +308,13 @@ function TemplateEditor({ open, onOpenChange, template, onSave, campaigns = [] }
                     <SelectItem value="negative">Negative</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-
-            <div>
-              <Label>Campaign</Label>
-              <Select value={campaignId} onValueChange={setCampaignId}>
-                <SelectTrigger className="mt-1.5"><SelectValue placeholder="Select a campaign" /></SelectTrigger>
+              </div> */}
+              <div>
+              <Label>Campaign (Optional)</Label>
+              <Select value={campaignId || "none"} onValueChange={(value) => setCampaignId(value === "none" ? "" : value)}>
+                <SelectTrigger className="mt-1.5"><SelectValue placeholder="Select a campaign (optional)" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
                   {campaigns.length === 0 ? (
                     <div className="p-2 text-sm text-gray-500 text-center">
                       No campaigns available
@@ -214,10 +330,13 @@ function TemplateEditor({ open, onOpenChange, template, onSave, campaigns = [] }
                   )}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500 mt-1.5">Discount codes will be assigned from this campaign</p>
+              <p className="text-xs text-gray-500 mt-1.5">Discount codes will be assigned from this campaign (if selected)</p>
+            </div>
             </div>
 
-            <div>
+            
+
+            {/* <div>
               <Label>Priority</Label>
               <Input 
                 className="mt-1.5" 
@@ -228,9 +347,9 @@ function TemplateEditor({ open, onOpenChange, template, onSave, campaigns = [] }
                 placeholder="0"
               />
               <p className="text-xs text-gray-500 mt-1.5">Higher priority templates are matched first</p>
-            </div>
+            </div> */}
 
-            <div>
+            {/* <div>
               <div className="flex items-center justify-between">
                 <Label>Sentiment threshold</Label>
                 <span className="text-xs font-mono text-gray-700 tabular-nums">≥ {threshold[0]}</span>
@@ -244,12 +363,11 @@ function TemplateEditor({ open, onOpenChange, template, onSave, campaigns = [] }
                 step={1}
               />
               <p className="text-xs text-gray-500 mt-1.5">Only auto-reply when score is above {threshold[0]}.</p>
-            </div>
+            </div> */}
           </div>
 
           <div>
-            <Label>Live preview</Label>
-            <div className="mt-3 rounded-xl bg-gray-50 border border-gray-200 p-6">
+            <div className=" rounded-xl bg-gray-50 border border-gray-200 p-2">
               <PhonePreview message={previewText} />
             </div>
           </div>
@@ -262,6 +380,49 @@ function TemplateEditor({ open, onOpenChange, template, onSave, campaigns = [] }
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Sample Template Dialog */}
+      <Dialog open={showSampleDialog} onOpenChange={setShowSampleDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sample Template</DialogTitle>
+            <DialogDescription>
+              This is a sample template you can use as a starting point. Copy and customize it for your needs.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <p className="font-mono text-sm text-gray-800 leading-relaxed">{DEFAULT_TEMPLATE}</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-700">Available tokens:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {tokens.map((t) => (
+                  <span
+                    key={t}
+                    className="inline-flex items-center text-xs font-mono bg-brand/10 text-brand-700 rounded-full px-2 py-0.5"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard.writeText(DEFAULT_TEMPLATE)
+                toast.success('Sample template copied to clipboard')
+              }}
+            >
+              <Copy className="h-3.5 w-3.5 mr-1.5" />
+              Copy Sample
+            </Button>
+            <Button onClick={() => setShowSampleDialog(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }
@@ -270,6 +431,8 @@ export default function AutoReplies() {
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState(null)
   const [openEditor, setOpenEditor] = useState(false)
+  const [duplicating, setDuplicating] = useState(null)
+  const [duplicateName, setDuplicateName] = useState('')
 
   // Fetch templates
   const { data: templatesData, isLoading: templatesLoading } = useQuery({
@@ -340,12 +503,14 @@ export default function AutoReplies() {
 
   // Duplicate mutation
   const duplicateMutation = useMutation({
-    mutationFn: async (id) => {
-      return await api.dmTemplates.duplicate(id)
+    mutationFn: async ({ id, name }) => {
+      return await api.dmTemplates.duplicate(id, { name })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dm-templates'] })
       toast.success('Template duplicated successfully')
+      setDuplicating(null)
+      setDuplicateName('')
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || 'Failed to duplicate template')
@@ -391,6 +556,19 @@ export default function AutoReplies() {
     setOpenEditor(true)
   }
 
+  const handleDuplicate = (template) => {
+    setDuplicating(template)
+    setDuplicateName(`${template.name} (Copy)`)
+  }
+
+  const handleConfirmDuplicate = () => {
+    if (!duplicateName.trim()) {
+      toast.error('Template name is required')
+      return
+    }
+    duplicateMutation.mutate({ id: duplicating.id, name: duplicateName.trim() })
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -432,17 +610,17 @@ export default function AutoReplies() {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-md bg-brand/10 flex items-center justify-center">
-                        <MessageCircle className="h-3.5 w-3.5 text-brand" />
-                      </div>
-                      <h3 className="font-semibold text-gray-900">{t.name}</h3>
+                    <div className={`h-7 w-7 rounded-md flex items-center justify-center ${t.active ? 'bg-brand/10' : 'bg-gray-100'}`}>
+                      <MessageCircle className={`h-3.5 w-3.5 ${t.active ? 'text-brand' : 'text-gray-400'}`} />
+                    </div>
+                    <h3 className={`font-semibold ${t.active ? 'text-gray-900' : 'text-gray-500'}`}>{t.name}</h3>
                     </div>
                     <div className="flex flex-wrap gap-1.5 mt-2">
-                      <Badge variant="secondary">
+                    <Badge variant="secondary" className={t.active ? '' : 'opacity-60'}>
                         {t.language === 'en' ? 'English' : t.language === 'ar' ? 'Arabic' : 'Both'}
                       </Badge>
-                      <Badge variant="teal">{t.sentiment_target}</Badge>
-                      {t.priority > 0 && <Badge variant="outline">Priority: {t.priority}</Badge>}
+                      {/* <Badge variant="teal">{t.sentiment_target}</Badge> */}
+                      {/* {t.priority > 0 && <Badge variant="outline">Priority: {t.priority}</Badge>} */}
                     </div>
                   </div>
                   <Switch
@@ -451,22 +629,22 @@ export default function AutoReplies() {
                   />
                 </div>
 
-                <p className="text-sm text-gray-600 leading-relaxed line-clamp-3 bg-gray-50 rounded-md p-3 border border-gray-100">
+                <p className={`text-sm leading-relaxed line-clamp-3 rounded-md p-3 border ${t.active ? 'text-gray-600 bg-gray-50 border-gray-100' : 'text-gray-400 bg-gray-50 border-gray-100'}`}>
                   {t.body}
                 </p>
 
-                <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className={`flex items-center justify-between text-xs ${t.active ? 'text-gray-500' : 'text-gray-400'}`}>
                   <span className="inline-flex items-center gap-1">
                     <Package className="h-3 w-3" /> {t.campaign?.name || 'No campaign'}
                   </span>
-                  <span>Threshold: {t.threshold}%</span>
+                  {/* <span>Threshold: {t.threshold}%</span> */}
                 </div>
 
                 <div className="flex items-center gap-1 pt-2 border-t border-gray-100">
                   <Button variant="ghost" size="sm" onClick={() => handleEdit(t)}>
                     <Edit className="h-3.5 w-3.5 mr-1.5" /> Edit
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => duplicateMutation.mutate(t.id)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleDuplicate(t)}>
                     <Copy className="h-3.5 w-3.5 mr-1.5" /> Duplicate
                   </Button>
                   <Button 
@@ -494,6 +672,54 @@ export default function AutoReplies() {
         onSave={handleSave}
         campaigns={campaigns}
       />
+
+      {/* Duplicate Template Dialog */}
+      <Dialog open={!!duplicating} onOpenChange={(open) => {
+        if (!open) {
+          setDuplicating(null)
+          setDuplicateName('')
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Duplicate Template</DialogTitle>
+            <DialogDescription>
+              Enter a name for the duplicated template.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Template name</Label>
+              <Input 
+                className="mt-1.5" 
+                value={duplicateName} 
+                onChange={(e) => setDuplicateName(e.target.value)}
+                placeholder="e.g. Default Thank You (Copy)"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleConfirmDuplicate()
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDuplicating(null)
+                setDuplicateName('')
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmDuplicate} disabled={duplicateMutation.isPending}>
+              {duplicateMutation.isPending ? 'Duplicating...' : 'Duplicate'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -5,7 +5,6 @@ import {
   MessageSquare,
   Tag,
   Package,
-  ShieldCheck,
   CheckCircle,
   Sparkles,
   Settings as SettingsIcon,
@@ -18,7 +17,6 @@ const navItems = [
   { to: '/campaigns', label: 'Campaigns', icon: Package },
   { to: '/discount-codes', label: 'Discount Codes', icon: Tag },
   { to: '/dm-templates', label: 'DM Templates', icon: MessageSquare },
-  { to: '/sentiment-filter', label: 'Sentiment Filter', icon: ShieldCheck },
   { to: '/verification', label: 'Verification', icon: CheckCircle },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ]

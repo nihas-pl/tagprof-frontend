@@ -484,30 +484,64 @@ export default function Settings() {
           ) : subscription ? (
             <>
               {/* Current Subscription Details */}
-              {subscription.status === 'trialing' ? (
-                <Card className="border-blue-200 bg-blue-50/50">
+              {subscription.plan_tier === 'free' ? (
+                <Card className="border-gray-200 bg-gray-50/50">
                   <CardContent className="p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <Badge variant="secondary" className="mb-2">Free Trial</Badge>
-                        <h3 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
-                          <Sparkles className="h-5 w-5 text-blue-500" />
-                          Premium Features Unlocked
-                        </h3>
-                        <p className="text-sm text-gray-700 font-medium mt-1">
-                          {subscription.days_until_expiry > 0 ? (
-                            `${subscription.days_until_expiry} days remaining`
-                          ) : (
-                            'Trial ends today'
-                          )}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Trial expires on {new Date(subscription.trial_ends_at).toLocaleDateString()}
-                        </p>
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <Badge variant="secondary" className="mb-2">Free Plan</Badge>
+                          <h3 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
+                            Current Plan
+                          </h3>
+                          <p className="text-sm text-gray-700 mt-2">
+                            You're on the free plan with limited features.
+                          </p>
+                        </div>
+                        <Button onClick={() => setShowPlanDialog(true)}>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Upgrade to Premium
+                        </Button>
                       </div>
-                      <Button onClick={() => setShowPlanDialog(true)}>
-                        Upgrade to Premium
-                      </Button>
+                      
+                      {/* Usage Stats */}
+                      <div className="border-t pt-4 space-y-3">
+                        <h4 className="font-medium text-gray-900">Your Usage</h4>
+                        <div className="space-y-2">
+                          <div>
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="text-gray-600">Mentions this month</span>
+                              <span className="font-medium">
+                                {subscription.usage?.mentions?.used || 0} / {subscription.limits?.monthly_mentions || 10}
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-brand h-2 rounded-full transition-all"
+                                style={{ 
+                                  width: `${Math.min(((subscription.usage?.mentions?.used || 0) / (subscription.limits?.monthly_mentions || 10)) * 100, 100)}%` 
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="text-gray-600">Campaigns</span>
+                              <span className="font-medium">
+                                {subscription.usage?.campaigns?.used || 0} / {subscription.limits?.max_campaigns || 1}
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-brand h-2 rounded-full transition-all"
+                                style={{ 
+                                  width: `${Math.min(((subscription.usage?.campaigns?.used || 0) / (subscription.limits?.max_campaigns || 1)) * 100, 100)}%` 
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -537,15 +571,15 @@ export default function Settings() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <Badge variant="outline" className="mb-2">No Active Subscription</Badge>
-                    <h3 className="text-2xl font-semibold text-gray-900">Start Your Free Trial</h3>
+                    <Badge variant="outline" className="mb-2">Free Plan</Badge>
+                    <h3 className="text-2xl font-semibold text-gray-900">Upgrade to Premium</h3>
                     <p className="text-sm text-gray-700 mt-1">
-                      Get 7 days of premium features for free
+                      Unlock unlimited mentions, campaigns, and priority support
                     </p>
                   </div>
                   <Button onClick={() => setShowPlanDialog(true)}>
                     <Sparkles className="h-4 w-4 mr-2" />
-                    Start Trial
+                    View Plans
                   </Button>
                 </div>
               </CardContent>

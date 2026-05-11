@@ -111,7 +111,7 @@ export const api = {
     create: (data) => apiClient.post('/api/v1/dm_templates', { template: data }),
     update: (id, data) => apiClient.patch(`/api/v1/dm_templates/${id}`, { template: data }),
     delete: (id) => apiClient.delete(`/api/v1/dm_templates/${id}`),
-    duplicate: (id) => apiClient.post(`/api/v1/dm_templates/${id}/duplicate`),
+    duplicate: (id, data = {}) => apiClient.post(`/api/v1/dm_templates/${id}/duplicate`, data),
   },
 
   // Verification

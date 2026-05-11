@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Instagram, AlertTriangle, MessageSquare, Users, CheckCircle, Package, ArrowUpRight, RefreshCw, Clock, Send, UserPlus, UserCheck, Settings2, Sparkles } from 'lucide-react'
+import { Instagram, AlertTriangle, MessageSquare, Users, CheckCircle, Package, ArrowUpRight, RefreshCw, Clock, Send, UserPlus, UserCheck, Settings2, Sparkles, Check, X } from 'lucide-react'
 import {
   ResponsiveContainer,
   LineChart,
@@ -104,9 +104,10 @@ export default function Dashboard() {
       {/* Instagram Connection Alert */}
       {!isLoadingSocial && !instagramConnected && (
         <Alert className="border-amber-200 bg-amber-50">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
+         
           <AlertDescription className="flex items-center justify-between">
             <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
               <span className="text-sm text-amber-800">
                 <strong>Instagram not connected.</strong> Connect to start automating your workflow.
               </span>
@@ -121,8 +122,8 @@ export default function Dashboard() {
         </Alert>
       )}
 
-      {/* Premium Subscription Alert */}
-      {!isLoadingSubscription && !hasActiveSubscription && (
+      {/* Free Plan Upgrade Alert */}
+      {!isLoadingSubscription && subscriptionData?.plan_tier === 'free' && (
         <Card className="border-0 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 shadow-lg overflow-hidden relative">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
           <CardContent className="py-5 relative z-10">
@@ -133,27 +134,27 @@ export default function Dashboard() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-lg font-bold text-white">Unlock Premium Features</h3>
-                    <Badge className="bg-yellow-400 text-yellow-900 hover:bg-yellow-400 border-0 font-semibold px-2 py-0.5 text-xs">
-                      7 Days Free Trial
+                    <h3 className="text-lg font-bold text-white">Upgrade to Premium</h3>
+                    <Badge className="bg-emerald-400 text-emerald-900 hover:bg-emerald-400 border-0 font-semibold px-2 py-0.5 text-xs">
+                      Free: {subscriptionData?.usage?.mentions?.used || 0}/{subscriptionData?.limits?.monthly_mentions || 10} mentions
                     </Badge>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/90">
                     <span className="flex items-center gap-1.5">
                       <CheckCircle className="h-3.5 w-3.5" />
-                      Unlimited Tracking
+                      Unlimited Mentions
                     </span>
                     <span className="flex items-center gap-1.5">
                       <CheckCircle className="h-3.5 w-3.5" />
-                      Advanced Analytics
+                      Unlimited Campaigns
                     </span>
                     <span className="flex items-center gap-1.5">
                       <CheckCircle className="h-3.5 w-3.5" />
-                      Priority Automation
+                      Unlimited Codes
                     </span>
                     <span className="flex items-center gap-1.5">
                       <CheckCircle className="h-3.5 w-3.5" />
-                      Custom Templates
+                      Priority Support
                     </span>
                   </div>
                 </div>
@@ -166,7 +167,7 @@ export default function Dashboard() {
                 >
                   <Link to="/settings?tab=billing" className="gap-2">
                     <Sparkles className="h-5 w-5" />
-                    Start Free Trial
+                    Upgrade Now
                     <ArrowUpRight className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -205,22 +206,34 @@ export default function Dashboard() {
                 <div className="relative">
                   <div className="absolute -inset-1 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 rounded-full opacity-75"></div>
                   <Avatar className="relative h-20 w-20 text-lg border-4 border-white shadow-lg">
+                    {recentMentions[0].contact?.avatar_url && (
+                      <AvatarImage src={recentMentions[0].contact.avatar_url} alt={recentMentions[0].contact.name || recentMentions[0].ig_handle} />
+                    )}
                     <AvatarFallback className="bg-gradient-to-br from-brand to-purple-500 text-white text-xl">
-                      {recentMentions[0].ig_handle?.[0]?.toUpperCase() || 'U'}
+                      {(recentMentions[0].contact?.name || recentMentions[0].ig_handle)?.[0]?.toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 
                 {/* Username and handle */}
                 <h3 className="mt-4 text-lg font-bold text-gray-900">@{recentMentions[0].ig_handle}</h3>
+                {recentMentions[0].contact?.name && (
+                  <p className="text-sm text-gray-600 mt-0.5">{recentMentions[0].contact.name}</p>
+                )}
                 <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   Latest mention {timeAgo(recentMentions[0].created_at)}
+                  {recentMentions[0].contact?.follower_count !== undefined && (
+                    <>
+                      <span>·</span>
+                      <span>{recentMentions[0].contact.follower_count.toLocaleString()} followers</span>
+                    </>
+                  )}
                 </p>
 
                 {/* Status badges */}
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  <SentimentBadge sentiment={recentMentions[0].sentiment_label} />
+                  {/* <SentimentBadge sentiment={recentMentions[0].sentiment_label} /> */}
                   
                   {recentMentions[0].status === 'dm_sent' ? (
                     <Badge className="bg-green-100 text-green-700 border-green-200 gap-1">
@@ -237,16 +250,36 @@ export default function Dashboard() {
 
                 {/* Follow relationship status */}
                 <div className="mt-4 w-full grid grid-cols-2 gap-2">
-                  {/* Followed Us - Mock data, replace with recentMentions[0].followed_us when available */}
-                  <div className="p-2 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center gap-1.5">
-                    <UserPlus className="h-4 w-4 text-blue-600" />
-                    <span className="text-xs font-medium text-blue-700">They Follow</span>
+                  {/* They Follow Us */}
+                  <div className={`p-1 rounded-lg flex items-center justify-center gap-1.5 ${
+                    recentMentions[0].contact?.is_user_follow_business
+                      ? 'bg-blue-50 border border-blue-100'
+                      : 'bg-gray-50 border border-gray-200'
+                  }`}>
+                    {recentMentions[0].contact?.is_user_follow_business ? (
+                      <Check className="h-4 w-4 text-blue-600" />
+                    ) : (
+                      <X className="h-4 w-4 text-gray-400" />
+                    )}
+                    <span className={`text-xs font-medium ${
+                      recentMentions[0].contact?.is_user_follow_business ? 'text-blue-700' : 'text-gray-500'
+                    }`}>They Follow</span>
                   </div>
                   
-                  {/* Followed Back - Mock data, replace with recentMentions[0].followed_back when available */}
-                  <div className="p-2 rounded-lg bg-purple-50 border border-purple-100 flex items-center justify-center gap-1.5">
-                    <UserCheck className="h-4 w-4 text-purple-600" />
-                    <span className="text-xs font-medium text-purple-700">We Follow</span>
+                  {/* We Follow Them */}
+                  <div className={`p-1 rounded-lg flex items-center justify-center gap-1.5 ${
+                    recentMentions[0].contact?.is_business_follow_user
+                      ? 'bg-purple-50 border border-purple-100'
+                      : 'bg-gray-50 border border-gray-200'
+                  }`}>
+                    {recentMentions[0].contact?.is_business_follow_user ? (
+                      <Check className="h-4 w-4 text-purple-600" />
+                    ) : (
+                      <X className="h-4 w-4 text-gray-400" />
+                    )}
+                    <span className={`text-xs font-medium ${
+                      recentMentions[0].contact?.is_business_follow_user ? 'text-purple-700' : 'text-gray-500'
+                    }`}>We Follow</span>
                   </div>
                 </div>
 
@@ -498,8 +531,11 @@ export default function Dashboard() {
                 >
                   <div className="flex items-start gap-3">
                     <Avatar className="h-9 w-9">
+                      {mention.contact?.avatar_url && (
+                        <AvatarImage src={mention.contact.avatar_url} alt={mention.contact.name || mention.ig_handle} />
+                      )}
                       <AvatarFallback className="text-xs bg-brand/10 text-brand">
-                        {mention.ig_handle?.[0]?.toUpperCase() || 'U'}
+                        {(mention.contact?.name || mention.ig_handle)?.[0]?.toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">

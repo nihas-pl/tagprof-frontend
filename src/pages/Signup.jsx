@@ -43,7 +43,6 @@ export default function Signup() {
       toast.success('Account created successfully!')
       navigate('/')
     } catch (error) {
-      console.error('Signup error:', error)
       const message = error.response?.data?.error || 'Failed to create account'
       toast.error(message)
     } finally {

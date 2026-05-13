@@ -30,7 +30,6 @@ export default function Login() {
       toast.success('Welcome back!')
       navigate('/')
     } catch (error) {
-      console.error('Login error:', error)
       const message = error.response?.data?.error || 'Invalid email or password'
       toast.error(message)
     } finally {

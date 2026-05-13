@@ -23,7 +23,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
-import { Instagram, Slack, Download, AlertTriangle, CheckCircle2, ExternalLink, Sparkles, Key } from 'lucide-react'
+import { Instagram, Slack, Download, AlertTriangle, CheckCircle2, ExternalLink, Sparkles, Key, CreditCard, MapPin, Pencil } from 'lucide-react'
 import { invoices } from '@/lib/mockData'
 import { formatAED } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -32,6 +32,7 @@ import { useAuthStore } from '@/stores/authStore'
 import useSubscriptionStore from '@/stores/subscriptionStore'
 import BillingInfoCard from '@/components/BillingInfoCard'
 import PlanSelectionDialog from '@/components/PlanSelectionDialog'
+import BillingAddressDialog from '@/components/BillingAddressDialog'
 
 export default function Settings() {
   const queryClient = useQueryClient()
@@ -40,6 +41,17 @@ export default function Settings() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { subscription, fetchSubscription, loading: subscriptionLoading } = useSubscriptionStore()
   const [showPlanDialog, setShowPlanDialog] = useState(false)
+  const [billingAddress, setBillingAddress] = useState(null)
+  const [billingAddressLoading, setBillingAddressLoading] = useState(false)
+  const [showAddressDialog, setShowAddressDialog] = useState(false)
+
+  // Get active tab from URL or default to "account"
+  const activeTab = searchParams.get('tab') || 'account'
+
+  // Handle tab change
+  const handleTabChange = (value) => {
+    setSearchParams({ tab: value })
+  }
 
   // Profile form state
   const [profileForm, setProfileForm] = useState({
@@ -70,6 +82,20 @@ export default function Settings() {
       // Silently fail - user might not have subscription yet
     })
   }, [])
+
+  // Fetch billing address when billing tab is active
+  useEffect(() => {
+    if (activeTab !== 'billing') return
+    setBillingAddressLoading(true)
+    api.users.getBillingAddress()
+      .then(({ data }) => {
+        const addr = data.billing_address
+        const isComplete = addr?.line1 && addr?.city && addr?.state && addr?.postcode && addr?.country
+        setBillingAddress(isComplete ? addr : null)
+      })
+      .catch(() => setBillingAddress(null))
+      .finally(() => setBillingAddressLoading(false))
+  }, [activeTab])
 
   // Handle OAuth callback messages
   useEffect(() => {
@@ -193,13 +219,11 @@ export default function Settings() {
         <p className="text-sm text-gray-500">Manage your account, integrations, billing and more.</p>
       </div>
 
-      <Tabs defaultValue="account" className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList>
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="instagram">Instagram</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
-          <TabsTrigger value="danger">Danger Zone</TabsTrigger>
         </TabsList>
 
         {/* Account */}
@@ -350,7 +374,7 @@ export default function Settings() {
                           {socialStatus.instagram.status === 'active' && !socialStatus.instagram.expired ? (
                             <Badge variant="success">Connected</Badge>
                           ) : socialStatus.instagram.expired ? (
-                            <Badge variant="destructive">Expired</Badge>
+                            <Badge variant="negative">Expired</Badge>
                           ) : (
                             <Badge variant="secondary">{socialStatus.instagram.status}</Badge>
                           )}
@@ -448,31 +472,6 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Notifications */}
-        <TabsContent value="notifications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Email Notifications</CardTitle>
-              <CardDescription>We'll send these to your account email.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              {[
-                { label: 'When a mention is flagged for review', default: true },
-                { label: 'When a code pool is running low (< 10 remaining)', default: true },
-                { label: 'Daily summary report', default: false },
-              ].map((opt) => (
-                <div key={opt.label} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{opt.label}</div>
-                  </div>
-                  <Switch defaultChecked={opt.default} />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-        </TabsContent>
-
         {/* Billing */}
         <TabsContent value="billing" className="space-y-4">
           {subscriptionLoading ? (
@@ -547,12 +546,66 @@ export default function Settings() {
                 </Card>
               ) : subscription.status === 'active' || subscription.cancel_at_period_end ? (
                 <BillingInfoCard subscription={subscription} />
+              ) : subscription.status === 'incomplete' ? (
+                <Card className="border-amber-200 bg-amber-50/50">
+                  <CardContent className="p-5">
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <Badge variant="warning" className="mb-2">Payment Incomplete</Badge>
+                          <h3 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
+                            Complete Your Payment
+                          </h3>
+                          <p className="text-sm text-gray-700 mt-2">
+                            Your subscription is pending payment confirmation. This usually happens when 3D Secure authentication is required or if there was an issue with your payment method.
+                          </p>
+                        </div>
+                        <Button onClick={() => setShowPlanDialog(true)} variant="default">
+                          Complete Payment
+                        </Button>
+                      </div>
+                      
+                      {/* Show subscription details if available */}
+                      {subscription.payment_method && (
+                        <div className="border-t pt-4 grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm text-gray-600">Plan</p>
+                            <p className="font-medium capitalize">
+                              {subscription.plan_tier} ({subscription.billing_interval})
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Payment Method</p>
+                            <p className="font-medium capitalize flex items-center gap-2">
+                              <CreditCard className="h-4 w-4" />
+                              {subscription.payment_method.brand} •••• {subscription.payment_method.last4}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="bg-amber-100 border border-amber-200 rounded-lg p-4">
+                        <div className="flex gap-3">
+                          <AlertTriangle className="h-5 w-5 text-amber-700 flex-shrink-0" />
+                          <div className="text-sm text-amber-900">
+                            <p className="font-medium mb-1">What to do next:</p>
+                            <ul className="list-disc list-inside space-y-1 text-amber-800">
+                              <li>Click "Complete Payment" to retry with the same card</li>
+                              <li>Or try a different payment method</li>
+                              <li>Ensure your card supports 3D Secure authentication if required</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               ) : (
                 <Card className="border-red-200 bg-red-50/50">
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <Badge variant="destructive" className="mb-2">Subscription Expired</Badge>
+                        <Badge variant="negative" className="mb-2">Subscription Expired</Badge>
                         <h3 className="text-2xl font-semibold text-gray-900">Renew Your Subscription</h3>
                         <p className="text-sm text-gray-700 mt-1">
                           Your subscription has expired. Renew now to regain access to all premium features.
@@ -586,84 +639,61 @@ export default function Settings() {
             </Card>
           )}
 
+          {/* Billing Address */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Billing Address
+                  </CardTitle>
+                  <CardDescription>Used for invoices and payment verification.</CardDescription>
+                </div>
+                {!billingAddressLoading && (
+                  <Button variant="outline" size="sm" onClick={() => setShowAddressDialog(true)}>
+                    <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                    {billingAddress ? 'Edit' : 'Add'}
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {billingAddressLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ) : billingAddress ? (
+                <div className="text-sm text-gray-700 space-y-0.5">
+                  <p>{billingAddress.line1}</p>
+                  {billingAddress.line2 && <p>{billingAddress.line2}</p>}
+                  <p>{[billingAddress.city, billingAddress.state, billingAddress.postcode].filter(Boolean).join(', ')}</p>
+                  <p>{billingAddress.country}</p>
+                </div>
+              ) : (
+                <p className="text-sm text-amber-600">No billing address on file. Add one before subscribing.</p>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Plan Selection Dialog */}
           <PlanSelectionDialog
             open={showPlanDialog}
             onOpenChange={setShowPlanDialog}
           />
+
+          <BillingAddressDialog
+            open={showAddressDialog}
+            onOpenChange={setShowAddressDialog}
+            onSaved={(addr) => {
+              setBillingAddress(addr)
+              setShowAddressDialog(false)
+            }}
+          />
         </TabsContent>
 
-        {/* Danger Zone */}
-        <TabsContent value="danger" className="space-y-4">
-          <Card className="border-red-200 bg-red-50/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-700">
-                <AlertTriangle className="h-4 w-4" />
-                Danger Zone
-              </CardTitle>
-              <CardDescription>Destructive actions. Some of these can't be undone.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between p-4 rounded-lg border border-red-200 bg-white">
-                <div>
-                  <div className="text-sm font-medium text-gray-900">Pause Automation</div>
-                  <p className="text-xs text-gray-500">Stop sending auto-DMs to all incoming mentions.</p>
-                </div>
-                <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => toast('Automation paused')}>
-                  Pause
-                </Button>
-              </div>
-
-              <AlertDialog>
-                <div className="flex items-center justify-between p-4 rounded-lg border border-red-200 bg-white">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">Clear All Codes</div>
-                    <p className="text-xs text-gray-500">Permanently deletes every code in every pool.</p>
-                  </div>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50">Clear Codes</Button>
-                  </AlertDialogTrigger>
-                </div>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Clear all codes?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will delete every code across all pools. Codes already issued to users will remain valid until they expire, but no new codes will be available.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => toast.success('All codes cleared')}>Yes, clear codes</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-
-              <AlertDialog>
-                <div className="flex items-center justify-between p-4 rounded-lg border border-red-200 bg-white">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">Delete Account</div>
-                    <p className="text-xs text-gray-500">Wipes everything: templates, pools, mentions, billing.</p>
-                  </div>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive">Delete Account</Button>
-                  </AlertDialogTrigger>
-                </div>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete your account?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This is permanent. All your data, templates, codes, and historical mentions will be deleted. You'll be invoiced for any usage since your last billing cycle.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => toast.success('Account scheduled for deletion')}>Yes, delete forever</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   )

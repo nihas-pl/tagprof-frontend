@@ -26,7 +26,6 @@ export default function OAuthCallback() {
         toast.success('Successfully signed in!')
         navigate('/')
       } catch (err) {
-        console.error('Failed to parse user data:', err)
         toast.error('Authentication failed')
         navigate('/login')
       }

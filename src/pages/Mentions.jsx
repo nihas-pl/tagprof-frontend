@@ -126,11 +126,11 @@ export default function Mentions() {
               <Calendar className="h-3.5 w-3.5" />
               Last 30 days
             </Button>
-            <div className="md:ml-auto">
+            {/* <div className="md:ml-auto">
               <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => toast.success('Exporting mentions to CSV...')}>
                 <Download className="h-4 w-4" /> Export
               </Button>
-            </div>
+            </div> */}
           </div>
         </CardContent>
       </Card>

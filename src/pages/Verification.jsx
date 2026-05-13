@@ -27,7 +27,6 @@ export default function Verification() {
       const response = await api.verification.check(code.trim().toUpperCase())
       setResult(response.data)
     } catch (error) {
-      console.error('Verification error:', error)
       toast.error('Failed to verify code')
     } finally {
       setLoading(false)
@@ -45,7 +44,6 @@ export default function Verification() {
       setResult({ ...result, valid: false, status: 'already_redeemed', message: 'Code has been redeemed' })
       setCode('')
     } catch (error) {
-      console.error('Redeem error:', error)
       const message = error.response?.data?.error || 'Failed to redeem code'
       toast.error(message)
     } finally {

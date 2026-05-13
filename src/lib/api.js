@@ -145,6 +145,9 @@ export const api = {
           password_confirmation: passwordConfirmation 
         } 
       }),
+    getBillingAddress: () => apiClient.get('/api/v1/users/billing_address'),
+    updateBillingAddress: (address) =>
+      apiClient.put('/api/v1/users/billing_address', { billing_address: address }),
   },
 
   // Subscriptions
@@ -152,6 +155,7 @@ export const api = {
     current: () => apiClient.get('/api/v1/subscription/current'),
     plans: () => apiClient.get('/api/v1/subscription/plans'),
     createSetupIntent: () => apiClient.post('/api/v1/subscription/create_setup_intent'),
+    initiate: (priceId) => apiClient.post('/api/v1/subscription/initiate', { price_id: priceId }),
     subscribe: (priceId, paymentMethodId) => 
       apiClient.post('/api/v1/subscription/subscribe', { price_id: priceId, payment_method_id: paymentMethodId }),
     cancel: () => apiClient.post('/api/v1/subscription/cancel'),

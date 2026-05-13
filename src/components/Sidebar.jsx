@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import {
   Home,
   AtSign,
@@ -8,8 +9,10 @@ import {
   CheckCircle,
   Sparkles,
   Settings as SettingsIcon,
+  Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import useSubscriptionStore from '@/stores/subscriptionStore'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: Home, end: true },
@@ -22,6 +25,18 @@ const navItems = [
 ]
 
 export function Sidebar({ onNavigate }) {
+  const navigate = useNavigate()
+  const { subscription, loading } = useSubscriptionStore()
+  const isFree = !subscription || subscription.plan_tier === 'free'
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    if (!loading) {
+      // Small delay so the fade-in is visible even on fast loads
+      const t = setTimeout(() => setReady(true), 80)
+      return () => clearTimeout(t)
+    }
+  }, [loading])
   return (
     <aside className="w-60 shrink-0 h-full border-r border-gray-200 bg-white flex flex-col">
       <div className="h-16 px-5 flex items-center gap-2 border-b border-gray-200">
@@ -69,15 +84,33 @@ export function Sidebar({ onNavigate }) {
         </ul>
       </nav>
 
-      <div className="m-3 rounded-lg border border-gray-200 bg-gradient-to-br from-brand/5 to-teal-50 p-3">
-        <div className="flex items-center gap-2 text-xs font-medium text-gray-900">
-          <Tag className="h-3.5 w-3.5 text-brand" />
-          Pro Tip
+      {isFree ? (
+        <div className={`m-3 rounded-lg border border-brand/20 bg-gradient-to-br from-brand/10 to-violet-50 p-3 transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex items-center gap-2 text-xs font-semibold text-brand">
+            <Zap className="h-3.5 w-3.5" />
+            Upgrade to Pro
+          </div>
+          <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+            Unlock unlimited mentions, campaigns, and automated DMs.
+          </p>
+          <button
+            onClick={() => { navigate('/settings?tab=billing'); onNavigate?.() }}
+            className="mt-2.5 w-full rounded-md bg-brand px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-brand/90 transition-colors"
+          >
+            Upgrade Now →
+          </button>
         </div>
-        <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
-          Monitor sentiment scores to optimize your discount code assignments.
-        </p>
-      </div>
+      ) : (
+        <div className={`m-3 rounded-lg border border-gray-200 bg-gradient-to-br from-brand/5 to-teal-50 p-3 transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex items-center gap-2 text-xs font-medium text-gray-900">
+            <Tag className="h-3.5 w-3.5 text-brand" />
+            Pro Tip
+          </div>
+          <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+            Set up discount code pools so every customer automatically receives a unique code.
+          </p>
+        </div>
+      )}
     </aside>
   )
 }

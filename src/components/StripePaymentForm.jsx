@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { api } from '../lib/api';
 import useSubscriptionStore from '../stores/subscriptionStore';
 import { Card, CardContent } from './ui/card';
+import BillingAddressDialog from './BillingAddressDialog';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -47,67 +48,124 @@ const PaymentForm = ({
 }) => {
   const stripe = useStripe();
   const elements = useElements();
-  const { subscribe, fetchSubscription } = useSubscriptionStore();
+  const { fetchSubscription } = useSubscriptionStore();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
   const [isReady, setIsReady] = useState(false);
+  const [billingAddress, setBillingAddress] = useState(null);
+  const [billingAddressChecked, setBillingAddressChecked] = useState(false);
+  const [showAddressDialog, setShowAddressDialog] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
+
+  // Load billing address on mount
+  useEffect(() => {
+    api.users.getBillingAddress()
+      .then(({ data }) => {
+        const addr = data.billing_address;
+        const isComplete = addr?.line1 && addr?.city && addr?.state && addr?.postcode && addr?.country;
+        setBillingAddress(isComplete ? addr : null);
+      })
+      .catch(() => setBillingAddress(null))
+      .finally(() => setBillingAddressChecked(true));
+  }, []);
+
+  // After billing address is saved, continue with payment if user was trying to submit
+  const handleAddressSaved = (savedAddress) => {
+    setBillingAddress(savedAddress);
+    setShowAddressDialog(false);
+    if (pendingSubmit) {
+      setPendingSubmit(false);
+      // Trigger payment after address is saved
+      setTimeout(() => processPayment(), 100);
+    }
+  };
+
+  // Update Elements amount when billing interval changes (deferred intent mode)
+  useEffect(() => {
+    if (elements && amount) {
+      elements.update({ amount: Math.round(amount * 100) });
+    }
+  }, [amount, elements]);
 
   const handlePaymentElementChange = (event) => {
     setIsReady(event.complete);
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    if (!stripe || !elements) {
-      return;
-    }
-
+  const processPayment = async () => {
+    if (!stripe || !elements) return;
     setProcessing(true);
     setError(null);
 
     try {
-      // Confirm setup with PaymentElement
-      const { error: confirmError, setupIntent } = await stripe.confirmSetup({
+      // Step 1: Validate the payment element fields
+      const { error: submitError } = await elements.submit();
+      if (submitError) throw new Error(submitError.message);
+
+      // Step 2: Create the subscription on the backend (returns PaymentIntent client_secret)
+      const { data } = await api.subscriptions.initiate(priceId);
+      const { client_secret } = data;
+
+      // Step 3: Confirm the PaymentIntent — Stripe handles 3DS automatically on_session
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
         elements,
+        clientSecret: client_secret,
         confirmParams: {
-          return_url: window.location.href, // Not used in our flow
+          return_url: `${window.location.origin}/settings?tab=billing&payment_complete=true`,
+          payment_method_data: {
+            billing_details: {
+              address: {
+                line1: billingAddress?.line1 || '',
+                line2: billingAddress?.line2 || '',
+                city: billingAddress?.city || '',
+                state: billingAddress?.state || '',
+                postal_code: billingAddress?.postcode || '',
+                country: billingAddress?.country || '',
+              }
+            }
+          }
         },
-        redirect: 'if_required', // Stay on page
+        redirect: 'if_required',
       });
 
-      if (confirmError) {
-        throw new Error(confirmError.message);
-      }
+      if (confirmError) throw new Error(confirmError.message);
 
-      if (setupIntent && setupIntent.status === 'succeeded') {
-        // Create subscription with payment method
-        await subscribe(priceId, setupIntent.payment_method);
-
-        // Refresh subscription data
+      if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
         await fetchSubscription();
-
-        // Success!
-        toast.success('Payment successful!');
+        toast.success('Payment successful! Your subscription is now active.');
         onSuccess();
-      } else {
-        throw new Error('Payment setup was not completed');
       }
     } catch (err) {
-      console.error('Payment error:', err);
       setError(err.message || 'Payment failed. Please try again.');
-      toast.error('Payment failed');
+      toast.error(err.message || 'Payment failed. Please try again.');
     } finally {
       setProcessing(false);
     }
   };
 
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!stripe || !elements) return;
+
+    // Check billing address before proceeding
+    if (!billingAddress) {
+      setPendingSubmit(true);
+      setShowAddressDialog(true);
+      return;
+    }
+
+    await processPayment();
+  };
+
   const annualMonthlyPrice = annualPrice ? (annualPrice / 12).toFixed(2) : '0.00';
+  const savingsPct = monthlyPrice && annualPrice
+    ? Math.round(((monthlyPrice * 12 - annualPrice) / (monthlyPrice * 12)) * 100)
+    : 0;
 
   return (
-    <div className="grid md:grid-cols-2 gap-20 px-6 py-6">
+    <>
+    <div className="grid md:grid-cols-2 gap-20 p-3">
       {/* Left Side - Plan Selection */}
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-1">
             Activate Your Premium Plan
@@ -144,7 +202,7 @@ const PaymentForm = ({
                   <div>
                     <h4 className="font-semibold text-gray-900">Monthly Plan</h4>
                     <p className="text-xs text-gray-500">
-                      Ideal for short-term sprints & trials.
+                      Billed monthly. Cancel anytime.
                     </p>
                   </div>
                 </div>
@@ -182,8 +240,9 @@ const PaymentForm = ({
                   <div>
                     <h4 className="font-semibold text-gray-900">Annual Plan</h4>
                     <p className="text-xs text-gray-500">
-                      Commit for a year with{' '}
-                      <span className="text-brand font-medium">20% savings</span>.
+                      Billed annually. {savingsPct > 0 && (
+                        <> <span className="text-brand font-medium">Save {savingsPct}% vs monthly</span>.</>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -203,29 +262,28 @@ const PaymentForm = ({
           <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-1">
             What you'll unlock <span className="text-brand">→</span>
           </h3>
-          <ul className="space-y-2 text-sm text-gray-600">
-            <li className="flex items-start gap-2">
-              <span className="text-brand mt-0.5">•</span>
-              <span>All tools, unlocked with no limits</span>
+          <ul className="space-y-2 text-xs text-gray-600">
+            <li className="flex items-center gap-1">
+              <span className="text-brand">•</span>
+              <span>Monitor and manage all Instagram mentions</span>
             </li>
-            <li className="flex items-start gap-2">
-              <span className="text-brand mt-0.5">•</span>
-              <span>Work together in real-time</span>
+            <li className="flex items-center gap-1">
+              <span className="text-brand">•</span>
+              <span>Run discount campaigns with unique code pools</span>
             </li>
-            <li className="flex items-start gap-2">
-              <span className="text-brand mt-0.5">•</span>
-              <span>Sync your workflow across any device</span>
+            <li className="flex items-center gap-1">
+              <span className="text-brand">•</span>
+              <span>Auto-send personalised DMs to every commenter</span>
             </li>
-            <li className="flex items-start gap-2">
-              <span className="text-brand mt-0.5">•</span>
-              <span>Faster help with priority support</span>
+            <li className="flex items-center gap-1">
+              <span className="text-brand">•</span>
+              <span>Sentiment analysis and priority support</span>
             </li>
           </ul>
-          <p className="text-xs text-gray-500 mt-4 leading-relaxed">
-            Everything unlocked, synced, and built for speed. Collaborate in real time, 
-            scale your workflow smoothly, and get help fast with priority support.
-          </p>
         </div>
+        <p className="text-xs text-gray-500 mt-auto pt-4 leading-relaxed">
+          Track every mention, reply with custom DM templates, and reward your audience with unique discount codes — all automated and managed in one place.
+        </p>
       </div>
 
       {/* Right Side - Payment Form */}
@@ -238,11 +296,57 @@ const PaymentForm = ({
           </p>
         </div>
 
+        {/* Billing Address Summary */}
+        {billingAddressChecked && (
+          <div className={`rounded-lg border px-3 py-2.5 flex items-start justify-between gap-3 ${
+            billingAddress ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'
+          }`}>
+            <div className="min-w-0">
+              <p className={`text-xs font-medium ${billingAddress ? 'text-green-800' : 'text-amber-800'}`}>
+                Billing Address
+              </p>
+              {billingAddress ? (
+                <p className="text-xs text-green-700 mt-0.5 truncate">
+                  {billingAddress.line1}, {billingAddress.city}, {billingAddress.postcode}, {billingAddress.country}
+                </p>
+              ) : (
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Required — will be prompted on Subscribe
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAddressDialog(true)}
+              className={`text-xs font-medium shrink-0 underline ${billingAddress ? 'text-green-700 hover:text-green-900' : 'text-amber-700 hover:text-amber-900'}`}
+            >
+              {billingAddress ? 'Edit' : 'Add'}
+            </button>
+          </div>
+        )}
+
         {/* Payment Element - includes cards, wallets, and other payment methods */}
         <PaymentElement
           options={PAYMENT_ELEMENT_OPTIONS}
           onChange={handlePaymentElementChange}
         />
+
+        {/* Processing Message */}
+        {/* {processing && (
+          <Alert className="bg-blue-50 border-blue-200">
+            <AlertDescription className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+              <div className="text-blue-900">
+                <p className="font-medium">Processing your payment...</p>
+                <p className="text-sm mt-1">
+                  {isReady 
+                    ? '⚠️ If a verification window appears, please complete it to finish your payment. Do not close the window.' 
+                    : 'Preparing payment form...'}
+                </p>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )} */}
 
         {/* Error Message */}
         {error && (
@@ -278,78 +382,107 @@ const PaymentForm = ({
           </Button>
 
           {/* Security Message */}
-          <p className="text-xs text-gray-500 text-center mt-3 flex items-center justify-center gap-1">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Your payment data is fully encrypted and handled with the highest security standards.
-          </p>
+          <div className="text-left mt-3 space-y-1">
+            <p className="text-xs text-gray-500 flex items-start justify-center gap-1">
+              <ShieldCheck className="h-4 w-4 text-green-500" />
+              Secure payment processing. You may be asked to verify your identity with your bank.
+            </p>
+            {/* {!processing && (
+              <p className="text-xs text-gray-400">
+                ⓘ Complete any verification prompts to avoid payment delays
+              </p>
+            )} */}
+          </div>
         </div>
       </form>
     </div>
+
+    {/* Billing Address Dialog */}
+    <BillingAddressDialog
+      open={showAddressDialog}
+      onOpenChange={(open) => {
+        setShowAddressDialog(open);
+        if (!open) setPendingSubmit(false);
+      }}
+      onSaved={handleAddressSaved}
+    />
+    </>
   );
 };
 
-// Wrapper component that fetches clientSecret and provides Elements context
+// Wrapper component that provides Elements context using deferred intent mode
+// No SetupIntent needed - Elements initialised with mode:'payment' and amount
+// On submit: backend creates subscription → confirmPayment on_session → 3DS handled naturally
 const StripePaymentForm = (props) => {
-  const [clientSecret, setClientSecret] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { fetchSubscription } = useSubscriptionStore();
+  const [loading, setLoading] = useState(false);
 
+  // Handle return from 3D Secure redirect
   useEffect(() => {
-    const fetchClientSecret = async () => {
-      try {
-        const { data } = await api.subscriptions.createSetupIntent();
-        setClientSecret(data.client_secret);
-      } catch (err) {
-        console.error('Failed to create setup intent:', err);
-        setError(err.message || 'Failed to initialize payment');
-        toast.error('Failed to initialize payment');
-      } finally {
-        setLoading(false);
+    const handlePaymentReturn = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentIntentClientSecret = urlParams.get('payment_intent_client_secret');
+      const paymentComplete = urlParams.get('payment_complete');
+
+      if (paymentComplete === 'true' && paymentIntentClientSecret) {
+        setLoading(true);
+        try {
+          const stripeInstance = await stripePromise;
+          const { paymentIntent, error } = await stripeInstance.retrievePaymentIntent(paymentIntentClientSecret);
+
+          if (error) {
+            toast.error(`Payment failed: ${error.message}`);
+          } else if (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing') {
+            await fetchSubscription();
+            toast.success('Payment successful! Your subscription is now active.');
+            window.history.replaceState({}, '', '/settings?tab=billing');
+            props.onSuccess();
+          } else {
+            toast.error(`Payment status: ${paymentIntent.status}. Please try again.`);
+          }
+        } catch (err) {
+          toast.error('Failed to complete payment. Please try again.');
+        } finally {
+          setLoading(false);
+          window.history.replaceState({}, '', '/settings?tab=billing');
+        }
+        return;
       }
     };
 
-    fetchClientSecret();
+    handlePaymentReturn();
   }, []);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex flex-col items-center justify-center py-12 space-y-3">
         <Loader2 className="h-8 w-8 animate-spin text-brand" />
+        <p className="text-sm text-gray-600">Completing your payment...</p>
       </div>
     );
   }
 
-  if (error || !clientSecret) {
-    return (
-      <div className="py-12">
-        <Alert variant="destructive">
-          <AlertDescription>
-            {error || 'Failed to initialize payment. Please try again.'}
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
+  const amount = props.billingInterval === 'monthly'
+    ? Math.round((parseFloat(props.monthlyPrice) || 14.99) * 100)
+    : Math.round((parseFloat(props.annualPrice) || 118.80) * 100);
 
   const options = {
-    clientSecret,
+    mode: 'payment',
+    amount,
+    currency: 'usd',
+    setup_future_usage: 'off_session',
+    payment_method_types: ['card'],
     appearance: {
       theme: 'stripe',
       variables: {
-        colorPrimary: '#d91a7a', // brand color
+        colorPrimary: '#d91a7a',
         borderRadius: '8px',
         spacingUnit: '4px',
         fontSizeBase: '14px',
       },
       rules: {
-        '.Input': {
-          padding: '10px 12px',
-          fontSize: '14px',
-        },
-        '.Label': {
-          fontSize: '13px',
-          marginBottom: '4px',
-        },
+        '.Input': { padding: '10px 12px', fontSize: '14px' },
+        '.Label': { fontSize: '13px', marginBottom: '4px' },
       },
     },
   };

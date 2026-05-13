@@ -113,7 +113,7 @@ export default function Dashboard() {
               </span>
             </div>
             <Button asChild size="sm" className="ml-4 shrink-0">
-              <Link to="/settings" className="gap-2">
+              <Link to="/settings?tab=instagram" className="gap-2">
                 <Instagram className="h-4 w-4" />
                 Connect Now
               </Link>
@@ -121,7 +121,7 @@ export default function Dashboard() {
           </AlertDescription>
         </Alert>
       )}
-
+      
       {/* Free Plan Upgrade Alert */}
       {!isLoadingSubscription && subscriptionData?.plan_tier === 'free' && (
         <Card className="border-0 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 shadow-lg overflow-hidden relative">
@@ -235,7 +235,7 @@ export default function Dashboard() {
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                   {/* <SentimentBadge sentiment={recentMentions[0].sentiment_label} /> */}
                   
-                  {recentMentions[0].status === 'dm_sent' ? (
+                  {/* {recentMentions[0].status === 'dm_sent' ? (
                     <Badge className="bg-green-100 text-green-700 border-green-200 gap-1">
                       <Send className="h-3 w-3" />
                       DM Sent
@@ -245,7 +245,7 @@ export default function Dashboard() {
                       <Send className="h-3 w-3" />
                       No DM
                     </Badge>
-                  )}
+                  )} */}
                 </div>
 
                 {/* Follow relationship status */}
@@ -407,7 +407,7 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <Button asChild variant="outline" size="sm" className="bg-white">
-                      <Link to="/settings">
+                      <Link to="/settings?tab=instagram">
                         <Instagram className="h-4 w-4 mr-2" />
                         Connect Instagram
                       </Link>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from './ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import useSubscriptionStore from '../stores/subscriptionStore';
@@ -47,7 +47,8 @@ const PlanSelectionDialog = ({ open, onOpenChange }) => {
   if (loading && !premiumPlan) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px]" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogTitle className="sr-only">Loading plans</DialogTitle>
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
@@ -59,7 +60,8 @@ const PlanSelectionDialog = ({ open, onOpenChange }) => {
   if (!premiumPlan) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px]" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogTitle className="sr-only">No plans available</DialogTitle>
           <div className="text-center py-8">
             <p className="text-muted-foreground">No plans available</p>
           </div>
@@ -73,7 +75,8 @@ const PlanSelectionDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogTitle className="sr-only">Activate Your Premium Plan</DialogTitle>
         <StripePaymentForm
           priceId={selectedPriceId}
           billingInterval={billingInterval}

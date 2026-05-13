@@ -613,7 +613,7 @@ export default function AutoReplies() {
                     <div className={`h-7 w-7 rounded-md flex items-center justify-center ${t.active ? 'bg-brand/10' : 'bg-gray-100'}`}>
                       <MessageCircle className={`h-3.5 w-3.5 ${t.active ? 'text-brand' : 'text-gray-400'}`} />
                     </div>
-                    <h3 className={`font-semibold ${t.active ? 'text-gray-900' : 'text-gray-500'}`}>{t.name}</h3>
+                    <h3 className={`capitalize font-semibold ${t.active ? 'text-gray-900' : 'text-gray-500'}`}>{t.name}</h3>
                     </div>
                     <div className="flex flex-wrap gap-1.5 mt-2">
                     <Badge variant="secondary" className={t.active ? '' : 'opacity-60'}>
